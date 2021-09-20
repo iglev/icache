@@ -35,7 +35,7 @@ func NewLRUObjCacheWithEvict(iSize int, onEvicted func(key interface{}, value in
 
 type lruItem struct {
 	val      interface{}
-	expireTs int64 // 时效时间戳
+	expireTs int64
 }
 
 func (c *LRUObjCache) Get(ctx context.Context, strKey string) (interface{}, error) {
