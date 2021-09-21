@@ -10,10 +10,11 @@ import (
 )
 
 var (
-	disableTestObjLRU     = true
-	disableTestBenchmark1 = false
-	disableTestBenchmark2 = false
-	disableTestBenchmark3 = false
+	disableTestObjLRU       = false
+	disableTestCacheByteLRU = false
+	disableTestBenchmark1   = false
+	disableTestBenchmark2   = false
+	disableTestBenchmark3   = false
 )
 
 type nodeObj struct {
@@ -118,36 +119,121 @@ func TestObjLRU(t *testing.T) {
 	t.Logf("for end-------------")
 
 	/*
-	   icache_test.go:47: TestObjLRU begin-----------------
-	   icache_test.go:18: key=stringKey
-	   icache_test.go:64: stringKey, val=string val err=<nil>
-	   icache_test.go:18: key=stringSink_SetBytes
-	   icache_test.go:68: stringSink_SetBytes, val=stringSink set bytes err=<nil>
-	   icache_test.go:18: key=byteKey
-	   icache_test.go:72: byteValue, val=byte val err=<nil>
-	   icache_test.go:18: key=byteSink_SetString
-	   icache_test.go:76: byteSink_SetString, val=byteSink set string err=<nil>
-	   icache_test.go:18: key=objKey
-	   icache_test.go:80: objValue, val={Num:10 Key:key Vec:[1 2 3]} err=<nil>
-	   icache_test.go:87: objValue2, val={Num:10 Key:new Key Vec:[1 2 3 4]} err=<nil>
-	   icache_test.go:89: for begin-----------
-	   icache_test.go:93: idx=0 stringKey, val=string val err=<nil>
-	   icache_test.go:93: idx=1 stringKey, val=string val err=<nil>
-	   icache_test.go:93: idx=2 stringKey, val=string val err=<nil>
-	   icache_test.go:18: key=stringKey
-	   icache_test.go:93: idx=3 stringKey, val=string val err=<nil>
-	   icache_test.go:93: idx=4 stringKey, val=string val err=<nil>
-	   icache_test.go:93: idx=5 stringKey, val=string val err=<nil>
-	   icache_test.go:18: key=stringKey
-	   icache_test.go:93: idx=6 stringKey, val=string val err=<nil>
-	   icache_test.go:93: idx=7 stringKey, val=string val err=<nil>
-	   icache_test.go:93: idx=8 stringKey, val=string val err=<nil>
-	   icache_test.go:18: key=stringKey
-	   icache_test.go:93: idx=9 stringKey, val=string val err=<nil>
-	   icache_test.go:96: for end-------------
-	   icache_test.go:107: TestObjLRU end-------------------
+	   icache_test.go:66: TestObjLRU begin-----------------
+	   icache_test.go:28: key=stringKey
+	   icache_test.go:87: stringKey, val=string val err=<nil>
+	   icache_test.go:28: key=stringSink_SetBytes
+	   icache_test.go:91: stringSink_SetBytes, val=stringSink set bytes err=<nil>
+	   icache_test.go:28: key=byteKey
+	   icache_test.go:95: byteValue, val=byte val err=<nil>
+	   icache_test.go:28: key=byteSink_SetString
+	   icache_test.go:99: byteSink_SetString, val=byteSink set string err=<nil>
+	   icache_test.go:28: key=objKey
+	   icache_test.go:103: objValue, val={Num:10 Key:key Vec:[1 2 3]} err=<nil>
+	   icache_test.go:110: objValue2, val={Num:10 Key:new Key Vec:[1 2 3 4]} err=<nil>
+	   icache_test.go:112: for begin-----------
+	   icache_test.go:116: idx=0 stringKey, val=string val err=<nil>
+	   icache_test.go:116: idx=1 stringKey, val=string val err=<nil>
+	   icache_test.go:116: idx=2 stringKey, val=string val err=<nil>
+	   icache_test.go:28: key=stringKey
+	   icache_test.go:116: idx=3 stringKey, val=string val err=<nil>
+	   icache_test.go:116: idx=4 stringKey, val=string val err=<nil>
+	   icache_test.go:116: idx=5 stringKey, val=string val err=<nil>
+	   icache_test.go:28: key=stringKey
+	   icache_test.go:116: idx=6 stringKey, val=string val err=<nil>
+	   icache_test.go:116: idx=7 stringKey, val=string val err=<nil>
+	   icache_test.go:116: idx=8 stringKey, val=string val err=<nil>
+	   icache_test.go:28: key=stringKey
+	   icache_test.go:116: idx=9 stringKey, val=string val err=<nil>
+	   icache_test.go:119: for end-------------
+	   icache_test.go:151: TestObjLRU end-------------------
 	*/
+}
 
+func TestCacheByteLRU(t *testing.T) {
+	t.Logf("TestCacheByteLRU begin-----------------")
+	defer t.Logf("TestCacheByteLRU end-------------------")
+	if disableTestCacheByteLRU {
+		return
+	}
+
+	byteLRU := NewLRUByteCache(10)
+	ic, err := NewICache(
+		SetCache(byteLRU),
+		SetGetter(GetterIfFunc(getter)),
+	)
+	if err != nil {
+		t.Logf("NewICache fail, err=%+v\n", err)
+		return
+	}
+
+	ctx := context.WithValue(context.Background(), "testing", t)
+	var stringValue string
+	err = ic.Get(ctx, "stringKey", StringSink(&stringValue))
+	t.Logf("stringKey, val=%s err=%+v\n", stringValue, err)
+
+	var stringByteValue string
+	err = ic.Get(ctx, "stringSink_SetBytes", StringSink(&stringByteValue))
+	t.Logf("stringSink_SetBytes, val=%s err=%+v\n", stringByteValue, err)
+
+	var byteValue []byte
+	err = ic.Get(ctx, "byteKey", ByteSink(&byteValue))
+	t.Logf("byteValue, val=%s err=%+v\n", byteValue, err)
+
+	var byteStringValue []byte
+	err = ic.Get(ctx, "byteSink_SetString", ByteSink(&byteStringValue))
+	t.Logf("byteSink_SetString, val=%s err=%+v\n", byteStringValue, err)
+
+	var objValue nodeObj
+	err = ic.Get(ctx, "objKey", ObjSink(&objValue))
+	t.Logf("objValue, val=%+v err=%+v\n", objValue, err)
+
+	objValue.Key = "new Key"
+	objValue.Vec = append(objValue.Vec, 4)
+
+	var objValue2 nodeObj
+	err = ic.Get(ctx, "objKey", ObjSink(&objValue2)) // 再次回源，因为LRUByteCache缓存器支持[]byte和string类型
+	t.Logf("objValue2, val=%+v err=%+v\n", objValue2, err)
+
+	t.Logf("for begin-----------")
+	for i := 0; i < 10; i++ {
+		var stringValue string
+		err = ic.Get(ctx, "stringKey", StringSink(&stringValue))
+		t.Logf("idx=%d stringKey, val=%s err=%+v\n", i, stringValue, err)
+		time.Sleep(1 * time.Second)
+	}
+	t.Logf("for end-------------")
+	/*
+	   icache_test.go:154: TestCacheByteLRU begin-----------------
+	   icache_test.go:28: key=stringKey
+	   icache_test.go:173: stringKey, val=string val err=<nil>
+	   icache_test.go:28: key=stringSink_SetBytes
+	   icache_test.go:177: stringSink_SetBytes, val=stringSink set bytes err=<nil>
+	   icache_test.go:28: key=byteKey
+	   icache_test.go:181: byteValue, val=byte val err=<nil>
+	   icache_test.go:28: key=byteSink_SetString
+	   icache_test.go:185: byteSink_SetString, val=byteSink set string err=<nil>
+	   icache_test.go:28: key=objKey
+	   icache_test.go:189: objValue, val={Num:10 Key:key Vec:[1 2 3]} err=<nil>
+	   icache_test.go:28: key=objKey
+	   icache_test.go:196: objValue2, val={Num:10 Key:key Vec:[1 2 3]} err=<nil>
+	   icache_test.go:198: for begin-----------
+	   icache_test.go:202: idx=0 stringKey, val=string val err=<nil>
+	   icache_test.go:202: idx=1 stringKey, val=string val err=<nil>
+	   icache_test.go:202: idx=2 stringKey, val=string val err=<nil>
+	   icache_test.go:28: key=stringKey
+	   icache_test.go:202: idx=3 stringKey, val=string val err=<nil>
+	   icache_test.go:202: idx=4 stringKey, val=string val err=<nil>
+	   icache_test.go:202: idx=5 stringKey, val=string val err=<nil>
+	   icache_test.go:28: key=stringKey
+	   icache_test.go:202: idx=6 stringKey, val=string val err=<nil>
+	   icache_test.go:202: idx=7 stringKey, val=string val err=<nil>
+	   icache_test.go:202: idx=8 stringKey, val=string val err=<nil>
+	   icache_test.go:28: key=stringKey
+	   icache_test.go:202: idx=9 stringKey, val=string val err=<nil>
+	   icache_test.go:205: for end-------------
+	   icache_test.go:237: TestCacheByteLRU end-------------------
+	*/
 }
 
 var (

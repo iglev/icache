@@ -33,17 +33,18 @@ func NewLRUObjCacheWithEvict(iSize int, onEvicted func(key interface{}, value in
 	return &LRUObjCache{lru: cache}
 }
 
-type lruItem struct {
+type lruObjItem struct {
 	val      interface{}
 	expireTs int64
 }
 
+// Get get
 func (c *LRUObjCache) Get(ctx context.Context, strKey string) (interface{}, error) {
 	valIf, ok := c.lru.Get(strKey)
 	if !ok {
 		return nil, ErrNotFound
 	}
-	item := valIf.(*lruItem)
+	item := valIf.(*lruObjItem)
 	// check ttl
 	if item.expireTs > 0 && time.Now().Unix() > item.expireTs {
 		c.lru.Remove(strKey)
@@ -52,8 +53,9 @@ func (c *LRUObjCache) Get(ctx context.Context, strKey string) (interface{}, erro
 	return item.val, nil
 }
 
+// Set set
 func (c *LRUObjCache) Set(ctx context.Context, strKey string, valIf interface{}, iTTL int32) error {
-	item := &lruItem{
+	item := &lruObjItem{
 		val: valIf,
 	}
 	if iTTL > 0 {
@@ -63,6 +65,7 @@ func (c *LRUObjCache) Set(ctx context.Context, strKey string, valIf interface{},
 	return nil
 }
 
+// Del del
 func (c *LRUObjCache) Del(ctx context.Context, strKey string) error {
 	c.lru.Remove(strKey)
 	return nil
