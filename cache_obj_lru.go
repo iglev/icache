@@ -71,6 +71,7 @@ func (c *LRUObjCache) Del(ctx context.Context, strKey string) error {
 	return nil
 }
 
+// IsErrNotFound is not found err
 func (c *LRUObjCache) IsErrNotFound(err error) bool {
 	return err == ErrNotFound
 }
